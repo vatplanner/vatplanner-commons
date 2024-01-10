@@ -30,6 +30,9 @@
         <junit.version>5.10.0</junit.version>
         <assertj.version>3.24.2</assertj.version>
         <mockito.version>5.6.0</mockito.version>
+
+        <!-- build dependencies -->
+        <maven.plugin.dependency.version>3.6.1</maven.plugin.dependency.version>
     </properties>
 
     <dependencyManagement>
@@ -72,4 +75,14 @@
             <version>${mockito.version}</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven.plugin.dependency.version}</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>
