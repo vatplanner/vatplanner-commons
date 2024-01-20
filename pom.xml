@@ -33,6 +33,7 @@
 
         <!-- build dependencies -->
         <maven.plugin.dependency.version>3.6.1</maven.plugin.dependency.version>
+        <maven.plugin.surefire.version>3.2.5</maven.plugin.surefire.version>
     </properties>
 
     <dependencyManagement>
@@ -82,6 +83,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>${maven.plugin.dependency.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.plugin.surefire.version}</version>
             </plugin>
         </plugins>
     </build>
