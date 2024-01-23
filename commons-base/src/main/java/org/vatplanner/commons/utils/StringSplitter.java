@@ -49,11 +49,15 @@ public class StringSplitter {
         /**
          * Returns the content of a single field.
          *
-         * @param index index of field to retrieve; starting from 0
+         * @param index index of field to retrieve; starting from 0, negative index counts from last field
          * @return field content according to split method
          * @throws IllegalArgumentException if the index is invalid or the field does not exist
          */
         public String getField(int index) {
+            if (index < 0) {
+                index = fields.length + index;
+            }
+
             verifyValidIndex(index);
             return fields[index];
         }
@@ -61,13 +65,33 @@ public class StringSplitter {
         /**
          * Returns the position of the first character of the specified split field on the original input string.
          *
-         * @param index index of field to retrieve; starting from 0
+         * @param index index of field to retrieve; starting from 0, negative index counts from last field
          * @return position of first character of the field
          * @throws IllegalArgumentException if the index is invalid or the field does not exist
          */
         public int getStartPosition(int index) {
+            if (index < 0) {
+                index = fields.length + index;
+            }
+
             verifyValidIndex(index);
             return startPositions[index];
+        }
+
+        /**
+         * Returns the position of the last character of the specified split field on the original input string.
+         *
+         * @param index index of field to retrieve; starting from 0, negative index counts from last field
+         * @return position of last character of the field
+         * @throws IllegalArgumentException if the index is invalid or the field does not exist
+         */
+        private int getEndPosition(int index) {
+            if (index < 0) {
+                index = fields.length + index;
+            }
+
+            verifyValidIndex(index);
+            return startPositions[index] + fields[index].length();
         }
 
         /**
@@ -107,12 +131,48 @@ public class StringSplitter {
          * Returns the part of the original input string starting from the given field, essentially returning
          * "the field and everything that follows" (incl. any split markers).
          *
-         * @param index index of field to start extracting original content from; index starting from 0
+         * @param index index of field to start extracting original content from; index starting from 0, negative index counts from last field
          * @return original string starting from given field, including any split markers
          * @throws IllegalArgumentException if the index is invalid or the field does not exist
          */
         public String getOriginalFromField(int index) {
             return original.substring(getStartPosition(index));
+        }
+
+        /**
+         * Returns the part of the original input string starting from a given field up to another field (excluding it),
+         * essentially returning "the field and everything that follows until another field" (incl. any split markers
+         * between but not before the end field).
+         *
+         * @param startIndex index of field to start extracting original content from; index starting from 0
+         * @param endIndex   index of field to stop extraction before (exclusive); index starting from 0, negative index counts from last field
+         * @return original string between specified fields, including any split markers between fields (not trailing)
+         * @throws IllegalArgumentException if an index is invalid or the fields do not exist
+         */
+        public String getOriginalBetweenFields(int startIndex, int endIndex) {
+            if (startIndex == endIndex) {
+                throw new IllegalArgumentException("end index can not be equal to start index; both are " + startIndex);
+            }
+
+            if (startIndex < 0) {
+                startIndex = fields.length + startIndex;
+            }
+
+            if (endIndex < 0) {
+                endIndex = fields.length + endIndex;
+            }
+
+            if (startIndex >= endIndex) {
+                throw new IllegalArgumentException("indexes are reversed or equal (start=" + startIndex + ", end=" + endIndex + ")");
+            }
+
+            OutOfRange.throwIfNotWithinIncluding("start index", startIndex, 0, fields.length - 1);
+            OutOfRange.throwIfNotWithinIncluding("end index", startIndex, 0, fields.length - 1);
+
+            int startPosition = getStartPosition(startIndex);
+            int endPosition = getEndPosition(endIndex - 1);
+
+            return original.substring(startPosition, endPosition);
         }
 
         private void verifyValidIndex(int index) {

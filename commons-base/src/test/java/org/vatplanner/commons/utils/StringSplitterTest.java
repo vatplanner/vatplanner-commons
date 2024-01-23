@@ -126,8 +126,15 @@ class StringSplitterTest {
             "'  This is a test  ', 3, 'test  '",
             "'  This is a test  ', 0, 'This is a test  '",
 
+            "'This is a test',    -1, 'test'",
+            "'This is a test',    -2, 'a test'",
+            "'This is a test',    -4, 'This is a test'",
+            "'  This is a test  ',-1, 'test  '",
+            "'  This is a test  ',-4, 'This is a test  '",
+
             "'Keep   everything    how it    was   originally', 2, 'how it    was   originally'",
             "'Keep   everything    how it    was   originally', 0, 'Keep   everything    how it    was   originally'",
+            "'Keep   everything    how it    was   originally',-3, 'it    was   originally'",
         })
         @ParameterizedTest
         void testGetOriginalFromField_fieldExists_returnsFullStringFromStartOfField(String original, int fieldIndex, String expectedResult) {
@@ -143,9 +150,11 @@ class StringSplitterTest {
 
         @CsvSource({
             "'test', 1",
-            "'test', -1",
+            "'test', -2",
             "'', 0",
+            "'',-1",
             "' ', 0",
+            "' ',-1",
         })
         @ParameterizedTest
         void testGetOriginalFromField_invalidIndex_throwsIllegalArgumentException(String original, int fieldIndex) {
@@ -159,11 +168,85 @@ class StringSplitterTest {
             assertThatThrownBy(action).isInstanceOf(IllegalArgumentException.class);
         }
 
+        @ParameterizedTest
+        @CsvSource({
+            "'This is a test.',  0,-1, 'This is a'",
+            "'This is a test.',  1,-1, 'is a'",
+            "'This is a test.',  2,-1, 'a'",
+            "'This is a test.', -4,-1, 'This is a'",
+            "'This is a test.', -2,-1, 'a'",
+            "'This is a test.', -3,-1, 'is a'",
+
+            "' This is a test.', 0,-1, 'This is a'",
+
+            "'  Several  spaces    in  between.  ', 1,-1, 'spaces    in'",
+            "'  Several  spaces    in  between.  ',-4, 2, 'Several  spaces'",
+        })
+        void testGetOriginalBetweenFields_fieldExists_returnsFullStringBetweenFields(String original, int startIndex, int endIndex, String expectedResult) {
+            // arrange
+            StringSplitter.Result splitterResult = StringSplitter.splitOnSpace(original);
+
+            // act
+            String result = splitterResult.getOriginalBetweenFields(startIndex, endIndex);
+
+            // assert
+            assertThat(result).isEqualTo(expectedResult);
+        }
+
+        @CsvSource({
+            "'test', 1, 2",
+            "'test', 0, 2",
+            "' ', 0, 1",
+            "' ', 0,-1",
+
+            // start = end is invalid because end is exclusive
+            "'test', 0, 0",
+            "'test',-1,-1",
+            "'This is a test.', 1, 1",
+
+            "'This is a test.', 1, 0", // start/end reversed
+            "'This is a test.', 2, 1", // start/end reversed
+            "'This is a test.',-1,-2", // start/end reversed
+            "'This is a test.',-5, 1", // start out of bounds
+            "'This is a test.', 0,-5", // end reversed and out of bounds
+        })
+        @ParameterizedTest
+        void testGetOriginalBetweenFields_invalidIndex_throwsIllegalArgumentException(String original, int startIndex, int endIndex) {
+            // arrange
+            StringSplitter.Result splitterResult = StringSplitter.splitOnSpace(original);
+
+            // act
+            ThrowingCallable action = () -> splitterResult.getOriginalBetweenFields(startIndex, endIndex);
+
+            // assert
+            assertThatThrownBy(action).isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @CsvSource({
+            "' This  is a test ', -4, 'This'",
+            "' This  is a test ', -3, 'is'",
+            "' This  is a test ', -2, 'a'",
+            "' This  is a test ', -1, 'test'",
+        })
+        @ParameterizedTest
+        void testGetField_validNegative_returnsFieldAddressedFromEnd(String original, int fieldIndex, String expectedResult) {
+            // arrange
+            StringSplitter.Result splitterResult = StringSplitter.splitOnSpace(original);
+
+            // act
+            String result = splitterResult.getField(fieldIndex);
+
+            // assert
+            assertThat(result).isEqualTo(expectedResult);
+        }
+
         @CsvSource({
             "'test', 1",
-            "'test', -1",
+            "'test', -2",
             "'', 0",
             "' ', 0",
+            "'', -1",
+            "' ', -1",
         })
         @ParameterizedTest
         void testGetField_invalidIndex_throwsIllegalArgumentException(String original, int fieldIndex) {
@@ -178,10 +261,30 @@ class StringSplitterTest {
         }
 
         @CsvSource({
+            "' This is a test. ', -4, 1",
+            "' This is a test. ', -3, 6",
+            "' This is a test. ', -2, 9",
+            "' This is a test. ', -1, 11",
+        })
+        @ParameterizedTest
+        void testGetStartPosition_validNegative_returnsPositionAddressedFromEnd(String original, int fieldIndex, int expectedResult) {
+            // arrange
+            StringSplitter.Result splitterResult = StringSplitter.splitOnSpace(original);
+
+            // act
+            int result = splitterResult.getStartPosition(fieldIndex);
+
+            // assert
+            assertThat(result).isEqualTo(expectedResult);
+        }
+
+        @CsvSource({
             "'test', 1",
-            "'test', -1",
+            "'test', -2",
             "'', 0",
             "' ', 0",
+            "'', -1",
+            "' ', -1",
         })
         @ParameterizedTest
         void testGetStartPosition_invalidIndex_throwsIllegalArgumentException(String original, int fieldIndex) {
