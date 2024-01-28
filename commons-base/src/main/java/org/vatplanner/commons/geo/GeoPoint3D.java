@@ -42,6 +42,10 @@ public class GeoPoint3D extends GeoPoint2D {
         return new GeoPoint3D(point.getLatitude(), point.getLongitude(), elevationMSL);
     }
 
+    public Length getElevationMSL() {
+        return elevationMSL;
+    }
+
     @Override
     public String toString() {
         return String.format("GeoPoint3D[lat=%f, lon=%f, elev=%f%s]", getLatitude(), getLongitude(), elevationMSL.getValue(), elevationMSL.getUnit().getShortName());
