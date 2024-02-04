@@ -1,5 +1,7 @@
 package org.vatplanner.commons.geo;
 
+import java.util.Optional;
+
 /**
  * Defines a range of valid {@link Altitude}s as encountered in flight planning. An {@link AltitudeConstraint} can be
  * left open to one side ("at or above/below") or it can be closed ("exactly"/"between"). Limits are included (valid).
@@ -32,6 +34,26 @@ public class AltitudeConstraint {
 
         this.min = min;
         this.max = max;
+    }
+
+    public Optional<Altitude> getMin() {
+        if (min == UNRESTRICTED_MIN) {
+            return Optional.empty();
+        }
+
+        return Optional.of(min);
+    }
+
+    public Optional<Altitude> getMax() {
+        if (max == UNRESTRICTED_MAX) {
+            return Optional.empty();
+        }
+
+        return Optional.of(max);
+    }
+
+    public boolean isUnrestricted() {
+        return (min == UNRESTRICTED_MIN) && (max == UNRESTRICTED_MAX);
     }
 
     @Override
