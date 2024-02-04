@@ -53,10 +53,22 @@ public class Length {
      */
     public enum Unit {
         METERS("m"),
-        FEET("ft");
+        FEET("ft"),
+        NAUTICAL_MILES("nm"); // international nautical mile, see comments below
 
         private static final double FACTOR_FEET_TO_METERS = 0.3048;
         private static final double FACTOR_METERS_TO_FEET = 1.0 / FACTOR_FEET_TO_METERS;
+
+        // nautical mile has been standardized to a fixed number of meters in 1929
+        private static final double FACTOR_NAUTICAL_MILES_TO_METERS = 1852.0;
+        private static final double FACTOR_METERS_TO_NAUTICAL_MILES = 1.0 / FACTOR_NAUTICAL_MILES_TO_METERS;
+
+        // before standardization in meters, nautical mile was defined differently in foot (also between US and Britain)
+        // do not use the historic definition (6080.0ft / 6080.2ft) and don't round (6076), converting the standard
+        // to feet leads to more accurate results; this has been universally accepted nowadays (USA since 1954,
+        // "Britain" since 1970)
+        private static final double FACTOR_NAUTICAL_MILES_TO_FEET = FACTOR_NAUTICAL_MILES_TO_METERS / FACTOR_FEET_TO_METERS;
+        private static final double FACTOR_FEET_TO_NAUTICAL_MILES = 1.0 / FACTOR_NAUTICAL_MILES_TO_FEET;
 
         private final String shortName;
 
@@ -86,10 +98,24 @@ public class Length {
                 return value;
             }
 
-            if (this == FEET && other == METERS) {
-                return value * FACTOR_FEET_TO_METERS;
-            } else if (this == METERS && other == FEET) {
-                return value * FACTOR_METERS_TO_FEET;
+            if (this == FEET) {
+                if (other == METERS) {
+                    return value * FACTOR_FEET_TO_METERS;
+                } else if (other == NAUTICAL_MILES) {
+                    return value * FACTOR_FEET_TO_NAUTICAL_MILES;
+                }
+            } else if (this == METERS) {
+                if (other == FEET) {
+                    return value * FACTOR_METERS_TO_FEET;
+                } else if (other == NAUTICAL_MILES) {
+                    return value * FACTOR_METERS_TO_NAUTICAL_MILES;
+                }
+            } else if (this == NAUTICAL_MILES) {
+                if (other == METERS) {
+                    return value * FACTOR_NAUTICAL_MILES_TO_METERS;
+                } else if (other == FEET) {
+                    return value * FACTOR_NAUTICAL_MILES_TO_FEET;
+                }
             }
 
             throw new UnsupportedConversion(this, other);
