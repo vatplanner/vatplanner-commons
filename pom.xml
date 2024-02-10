@@ -13,6 +13,7 @@
         <module>commons-base</module>
         <module>commons-amqp</module>
         <module>commons-crypto</module>
+        <module>commons-fileaccess-jgit</module>
     </modules>
 
     <properties>
@@ -22,6 +23,7 @@
 
         <!-- runtime dependencies -->
         <amqpClient.version>5.20.0</amqpClient.version>
+        <jgit.version>5.13.3.202401111512-r</jgit.version> <!-- listing: https://projects.eclipse.org/projects/technology.jgit -->
         <jsonSimple.version>4.0.1</jsonSimple.version>
         <pgPainless.version>1.6.5</pgPainless.version>
         <slf4j.version>1.7.12</slf4j.version>

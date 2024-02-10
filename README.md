@@ -20,6 +20,10 @@ project:
   doing and have reviewed the code to be free of any concerns for your project. Functionality is specific to the scope
   of the VATPlanner project which means some (if not most) functionality may be insufficient and maybe not even
   cryptographically sane when used in other scopes.
+- `vatplanner-commons-fileaccess-jgit` adds a `FileAccessProvider` using Eclipse JGit™ for Git® repository access. \
+  Note that this is only a bridge to such repositories using the implementation provided by the upstream project.
+  This module shall not be confused with any of the mentioned projects or organizations, see the Acknowledgements
+  section below for more information.
 
 Some of these classes may also be useful for projects other than just those associated with VATPlanner. Nevertheless,
 this repository should primarily be understood as an essential part of "just" VATPlanner.
@@ -30,6 +34,19 @@ may change seemingly "at random" as they are solely aligned with ongoing develop
 ## License
 
 This project is released under [MIT license](LICENSE.md).
+
+### Acknowledgements
+
+[Eclipse](https://www.eclipse.org/) and [Eclipse JGit](https://www.eclipse.org/jgit/) are trademarks of
+[Eclipse Foundation, Inc.](https://www.eclipse.org/)
+
+[Git](https://git-scm.com/) and the Git logo are either registered trademarks or trademarks of
+[Software Freedom Conservancy, Inc.](https://sfconservancy.org/), corporate home of the Git Project, in the
+United States and/or other countries.
+
+This project (VATPlanner) has no affiliation with the mentioned trademark holders and shall not be confused with any of
+these projects and/or organizations. JGit and Git are only being mentioned to describe this project's dependencies and
+to acknowledge the trademarks as requested by the respective parties.
 
 ### Additional Disclaimer
 
