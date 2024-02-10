@@ -12,8 +12,6 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.vatplanner.commons.geo.GeoMath;
-import org.vatplanner.commons.geo.GeoPoint2D;
 
 class GeoMathTest {
 
