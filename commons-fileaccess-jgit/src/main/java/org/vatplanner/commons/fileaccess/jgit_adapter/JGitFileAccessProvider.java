@@ -5,7 +5,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -48,13 +51,11 @@ import org.vatplanner.commons.fileaccess.FileInfo;
  * and to acknowledge the trademarks as requested by the respective parties.
  * </p>
  */
-public class JGitFileAccessProvider implements FileAccessProvider {
+public class JGitFileAccessProvider implements FileAccessProvider.RandomAccess {
     private static final Logger LOGGER = LoggerFactory.getLogger(JGitFileAccessProvider.class);
 
     private final Repository repository;
     private final RevTree revTree;
-
-    private static final Predicate<FileInfo> ALL_FILES = x -> true;
 
     private static final Collection<Predicate<File>> META_DATA_DIRECTORY_REQUIREMENTS = Arrays.asList(
         item -> "index".equals(item.getName()) && item.isFile(),
@@ -63,6 +64,10 @@ public class JGitFileAccessProvider implements FileAccessProvider {
         item -> "objects".equals(item.getName()) && item.isDirectory(),
         item -> "refs".equals(item.getName()) && item.isDirectory()
     );
+
+    private interface TreeWalkVisitor {
+        void visit(FileInfo info, ObjectLoader objectLoader) throws IOException;
+    }
 
     /**
      * Instantiates a new {@link FileAccessProvider} for the repository at given location.
@@ -123,7 +128,9 @@ public class JGitFileAccessProvider implements FileAccessProvider {
 
     @Override
     public Stream<FileHolder> streamFiles() {
-        return streamFiles(ALL_FILES);
+        Stream.Builder<FileHolder> streamBuilder = Stream.builder();
+        forEach((fileInfo, objectLoader) -> streamBuilder.accept(new FileHolder(fileInfo, objectLoader.getBytes())));
+        return streamBuilder.build();
     }
 
     @Override
@@ -134,7 +141,52 @@ public class JGitFileAccessProvider implements FileAccessProvider {
     }
 
     @Override
+    public Optional<FileHolder> getFile(AccessPath path) {
+        String treePath = String.join("/", path.getPathSegments());
+
+        synchronized (repository) {
+            try {
+                ObjectId objectId;
+                try (TreeWalk treeWalk = TreeWalk.forPath(repository, treePath, revTree)) {
+                    if (treeWalk == null) {
+                        return Optional.empty();
+                    }
+
+                    objectId = treeWalk.getObjectId(0);
+                }
+
+                ObjectLoader objectLoader = repository.open(objectId);
+
+                return Optional.of(new FileHolder(
+                    FileInfo.builder()
+                            .setSize(objectLoader.getSize())
+                            .setPath(path)
+                            .build(),
+                    objectLoader.getBytes()
+                ));
+            } catch (IOException ex) {
+                throw new RepositoryAccessFailed("Failed to look up " + path + " (" + treePath + ")", ex);
+            }
+        }
+    }
+
+    @Override
+    public Set<FileInfo> listFiles() {
+        Set<FileInfo> out = new HashSet<>();
+        forEach((fileInfo, objectLoader) -> out.add(fileInfo));
+        return out;
+    }
+
+    @Override
     public void forEach(Predicate<FileInfo> filter, Consumer<FileHolder> consumer) {
+        forEach((fileInfo, objectLoader) -> {
+            if (filter.test(fileInfo)) {
+                consumer.accept(new FileHolder(fileInfo, objectLoader.getBytes()));
+            }
+        });
+    }
+
+    private void forEach(TreeWalkVisitor visitor) {
         synchronized (repository) {
             try (TreeWalk treeWalk = new TreeWalk(repository)) {
                 treeWalk.addTree(revTree);
@@ -157,9 +209,7 @@ public class JGitFileAccessProvider implements FileAccessProvider {
                                                 .setSize(objectLoader.getSize())
                                                 .build();
 
-                    if (filter.test(fileInfo)) {
-                        consumer.accept(new FileHolder(fileInfo, objectLoader.getBytes()));
-                    }
+                    visitor.visit(fileInfo, objectLoader);
                 }
             } catch (IOException ex) {
                 throw new RepositoryAccessFailed("Failed to walk tree on repository " + repository.getDirectory() + " (ObjectId: " + revTree.toObjectId() + ")", ex);
