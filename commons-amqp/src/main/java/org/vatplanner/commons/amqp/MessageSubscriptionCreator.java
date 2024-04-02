@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.vatplanner.commons.crypto.CryptoFailure;
 import org.vatplanner.commons.crypto.Cryptor;
 
 import com.rabbitmq.client.AMQP;
@@ -309,7 +310,7 @@ public class MessageSubscriptionCreator extends AmqpSubscriptionCreator {
             if (signatureHeader != null) {
                 try {
                     verifiedKeyIds = cryptor.verify(signedData, Cryptor.Signature.asciiArmored(signatureHeader.toString()));
-                } catch (Cryptor.CryptoFailure ex) {
+                } catch (CryptoFailure ex) {
                     LOGGER.warn("{}Message signature could not be verified", logPrefix, ex);
                 }
             }

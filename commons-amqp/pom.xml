@@ -22,13 +22,6 @@
         </dependency>
 
         <dependency>
-            <!-- FIXME: loosen dependency -->
-            <groupId>${project.groupId}</groupId>
-            <artifactId>vatplanner-commons-crypto</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-
-        <dependency>
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
             <version>${amqpClient.version}</version>

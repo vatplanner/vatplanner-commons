@@ -16,7 +16,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -52,6 +51,7 @@ import org.vatplanner.commons.utils.IOStreams;
 
 /**
  * Handles cryptography for use in limited context of the application (VATPlanner) this was originally written for.
+ * This implementation is a wrapper around PGPainless which in turn uses BouncyCastle.
  * <p>
  * Note that all operations are specific to the needs and intended usage of the original application. In particular, if
  * a large number of uncontrolled keys is being used, verification may yield undesired results due to key ID collision.
@@ -62,8 +62,8 @@ import org.vatplanner.commons.utils.IOStreams;
  * instead of improving it.
  * </p>
  */
-public class Cryptor {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Cryptor.class);
+public class PGCryptor implements Cryptor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PGCryptor.class);
 
     private static final String PUBLIC_DIRECTORY = "public";
     private static final FilenameFilter FILTER_PUBLIC_KEYS = (dir, name) -> name.toLowerCase().endsWith(".pub") || name.toLowerCase().endsWith(".pub.asc");
@@ -107,56 +107,31 @@ public class Cryptor {
         PGPPublicKeyRingCollection ringCollection = new PGPPublicKeyRingCollection(Collections.emptyList());
     }
 
+    private interface ThrowingSupplier<T, EX extends Throwable> {
+        T get() throws EX;
+    }
+
     /**
      * Provides an OpenPGP signature in both ASCII armored and hex/byte format.
      */
-    public static class Signature {
-        private final String asciiArmored;
-        private final byte[] bytes;
-
-        private Signature(String asciiArmored, byte[] bytes) {
-            this.asciiArmored = asciiArmored;
-            this.bytes = bytes;
+    public static class PGSignature extends Signature {
+        private PGSignature(String asciiArmored, byte[] bytes) {
+            super(asciiArmored, bytes);
         }
 
-        private Signature(PGPSignature pgpSignature) {
+        private PGSignature(PGPSignature pgpSignature) {
+            this(
+                wrapIOException(() -> PGPainless.asciiArmor(pgpSignature)),
+                wrapIOException(pgpSignature::getEncoded)
+            );
+        }
+
+        private static <T> T wrapIOException(ThrowingSupplier<T, IOException> supplier) {
             try {
-                this.asciiArmored = PGPainless.asciiArmor(pgpSignature);
-                this.bytes = pgpSignature.getEncoded();
+                return supplier.get();
             } catch (IOException ex) {
                 throw new CryptoFailure("Signature could not be encoded", ex);
             }
-        }
-
-        /**
-         * Creates a new holder for the given ASCII armored {@link Signature}.
-         *
-         * @param asciiArmored ASCII armored signature
-         * @return holder object for use with other methods
-         */
-        public static Signature asciiArmored(String asciiArmored) {
-            return new Signature(asciiArmored, null);
-        }
-
-        /**
-         * Returns the ASCII armored representation of this signature.
-         *
-         * @return ASCII armored representation
-         */
-        public String getAsciiArmored() {
-            return asciiArmored;
-        }
-
-        /**
-         * Returns the binary representation of this signature.
-         *
-         * @return binary representation
-         */
-        public Optional<byte[]> getBytes() {
-            if (bytes == null) {
-                return Optional.empty();
-            }
-            return Optional.of(Arrays.copyOf(bytes, bytes.length));
         }
     }
 
@@ -166,7 +141,7 @@ public class Cryptor {
      * @param baseDirectory          base directory to read keys from (both public and secret)
      * @param secretKeyRingProtector a method to access (unprotect) all secret keys
      */
-    public Cryptor(File baseDirectory, SecretKeyRingProtector secretKeyRingProtector) {
+    public PGCryptor(File baseDirectory, SecretKeyRingProtector secretKeyRingProtector) {
         reconfigure(baseDirectory, secretKeyRingProtector);
     }
 
@@ -177,7 +152,7 @@ public class Cryptor {
      * @param signingKeyFile         secret key to be used for signing
      * @param secretKeyRingProtector a method to access (unprotect) all secret keys
      */
-    public Cryptor(File baseDirectory, File signingKeyFile, SecretKeyRingProtector secretKeyRingProtector) {
+    public PGCryptor(File baseDirectory, File signingKeyFile, SecretKeyRingProtector secretKeyRingProtector) {
         reconfigure(baseDirectory, signingKeyFile, secretKeyRingProtector);
     }
 
@@ -370,12 +345,7 @@ public class Cryptor {
         return ringCollection;
     }
 
-    /**
-     * Decrypts the given content.
-     *
-     * @param encrypted content to decrypt
-     * @return decrypted content
-     */
+    @Override
     public byte[] decrypt(byte[] encrypted) {
         return decrypt(new ByteArrayInputStream(encrypted));
     }
@@ -384,12 +354,7 @@ public class Cryptor {
         return decrypt(new ByteArrayInputStream(encrypted), keySet);
     }
 
-    /**
-     * Decrypts the given stream.
-     *
-     * @param is stream to decrypt
-     * @return decrypted content
-     */
+    @Override
     public byte[] decrypt(InputStream is) {
         return decrypt(is, activeKeySet.get());
     }
@@ -422,18 +387,7 @@ public class Cryptor {
         }
     }
 
-    /**
-     * Returns all key IDs related to the recipients listed by the given encrypted content, as currently known from this
-     * instance's configuration.
-     * <p>
-     * PGP uses master and sub-keys, each of which could be used for communication. When exchanging information, for
-     * example when trying to figure out if a signature matches to any recipient of a previously encrypted file, the
-     * master key IDs must also be taken into account although the signature only indicates a sub-key.
-     * </p>
-     *
-     * @param encrypted encrypted content
-     * @return all known master and sub-keys IDs related to the recipients of the encrypted content
-     */
+    @Override
     public Set<Long> getRelatedRecipientKeyIds(byte[] encrypted) {
         return getRelatedPublicKeyIds(getRecipientKeyIds(encrypted), activeKeySet.get());
     }
@@ -480,23 +434,12 @@ public class Cryptor {
         }
     }
 
-    /**
-     * Encrypts the given content in ASCII armored format to all public keys currently loaded.
-     *
-     * @param unencrypted content to encrypt
-     * @return encrypted content in ASCII armored format
-     */
+    @Override
     public byte[] encryptArmored(byte[] unencrypted) {
         return encrypt(unencrypted, false);
     }
 
-    /**
-     * Encrypts the given content to unarmored binary format to all public keys currently loaded.
-     * Besides not using an ASCII-compatible encoding, unarmored files also do not contain CRC checksums.
-     *
-     * @param unencrypted content to encrypt
-     * @return encrypted content in unarmored binary format
-     */
+    @Override
     public byte[] encryptUnarmored(byte[] unencrypted) {
         return encrypt(unencrypted, true);
     }
@@ -550,12 +493,7 @@ public class Cryptor {
         }
     }
 
-    /**
-     * Signs the given content, returning the detached {@link Signature}.
-     *
-     * @param data content to sign
-     * @return detached signature
-     */
+    @Override
     public Signature sign(byte[] data) {
         return sign(data, activeKeySet.get());
     }
@@ -587,26 +525,14 @@ public class Cryptor {
                     throw new CryptoFailure("Failed to sign; expected exactly one signature but got " + signatures.size() + " on value-level");
                 }
 
-                return new Signature(signatures.iterator().next());
+                return new PGSignature(signatures.iterator().next());
             } catch (PGPException | IOException ex) {
                 throw new CryptoFailure("Failed to sign", ex);
             }
         }
     }
 
-    /**
-     * Verifies if the given data and detached {@link Signature} match and returns all key IDs the signature was valid
-     * for and their related key IDs. In case the signature does not match, the result will be empty.
-     * <p>
-     * Note that using the "expanded" key IDs for identification is potentially unsafe outside the limited context of
-     * this application as there is a risk of key ID collisions if a larger number of keys is used, particularly if
-     * the keys are not manually maintained.
-     * </p>
-     *
-     * @param signedDataWithoutSignature content to check signature for
-     * @param signature                  detached signature
-     * @return key IDs that relate to those that signed the content; empty if signature did not match
-     */
+    @Override
     public Set<Long> verify(byte[] signedDataWithoutSignature, Signature signature) {
         return verify(signedDataWithoutSignature, signature, activeKeySet.get());
     }
@@ -657,19 +583,6 @@ public class Cryptor {
             } catch (PGPException | IOException ex) {
                 throw new CryptoFailure("Signature verification failed", ex);
             }
-        }
-    }
-
-    /**
-     * Thrown if any cryptographic operation or setup fails.
-     */
-    public static class CryptoFailure extends RuntimeException {
-        private CryptoFailure(String msg) {
-            super(msg);
-        }
-
-        private CryptoFailure(String msg, Throwable cause) {
-            super(msg, cause);
         }
     }
 
