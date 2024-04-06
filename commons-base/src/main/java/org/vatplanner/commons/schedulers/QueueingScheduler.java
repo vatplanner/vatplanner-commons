@@ -1,8 +1,8 @@
 package org.vatplanner.commons.schedulers;
 
-import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -10,12 +10,14 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.vatplanner.commons.utils.ThrowingSupplier;
 
 public class QueueingScheduler implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueueingScheduler.class);
 
-    private final Map<Class<? extends Task>, Instant> schedule = new HashMap<>();
-    private final Map<Class<? extends Task>, Duration> repeatIntervals = new HashMap<>();
+    private final Map<String, ThrowingSupplier<? extends Task, ?>> suppliers = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, Instant> schedule = new HashMap<>();
+    private final Map<String, Duration> repeatIntervals = Collections.synchronizedMap(new HashMap<>());
     private final AtomicReference<TaskExecution> runningTask = new AtomicReference<>();
 
     private final AtomicReference<Thread> schedulerThread = new AtomicReference<>();
@@ -26,21 +28,23 @@ public class QueueingScheduler implements Runnable {
 
     private static class TaskExecution implements Runnable {
         private final Thread thread;
+        private final String taskName;
         private final Task task;
         private final Object notificationObject;
         private final AtomicReference<Exception> exception = new AtomicReference<>();
         private final AtomicBoolean done = new AtomicBoolean();
 
-        TaskExecution(Task task, Object notificationObject) {
+        TaskExecution(String taskName, Task task, Object notificationObject) {
             this.notificationObject = notificationObject;
+            this.taskName = taskName;
             this.task = task;
             this.thread = new Thread(this);
             thread.setName("Task " + task.getClass().getSimpleName());
             thread.start();
         }
 
-        Class<? extends Task> getTaskClass() {
-            return task.getClass();
+        String getTaskName() {
+            return taskName;
         }
 
         void cancelAsync() {
@@ -62,7 +66,7 @@ public class QueueingScheduler implements Runnable {
             try {
                 task.run();
             } catch (Exception ex) {
-                LOGGER.warn("task {} failed", task.getClass(), ex);
+                LOGGER.warn("task {} failed", taskName, ex);
                 exception.set(ex);
             }
 
@@ -110,21 +114,21 @@ public class QueueingScheduler implements Runnable {
             if (previousTask == null) {
                 canStartNextTask = true;
             } else if (previousTask.isDone()) {
-                Class<? extends Task> clazz = previousTask.getTaskClass();
-                Duration interval = repeatIntervals.get(clazz);
+                String taskName = previousTask.getTaskName();
+                Duration interval = repeatIntervals.get(taskName);
 
                 boolean failed = (previousTask.exception.get() != null);
                 if (failed) {
-                    LOGGER.warn("task {} has failed, applying retry interval", clazz);
+                    LOGGER.warn("task {} has failed, applying retry interval", taskName);
                     interval = FAILED_RETRY;
                 }
 
                 if (interval == null) {
-                    LOGGER.info("task {} finished, not rescheduling (no interval configured)", clazz);
+                    LOGGER.info("task {} finished, not rescheduling (no interval configured)", taskName);
                 } else {
                     Instant nextRun = Instant.now().plus(interval);
-                    schedule.put(clazz, nextRun);
-                    LOGGER.info("task {} finished, rescheduled for {}", clazz, nextRun);
+                    schedule.put(taskName, nextRun);
+                    LOGGER.info("task {} finished, rescheduled for {}", taskName, nextRun);
                 }
 
                 runningTask.set(null);
@@ -135,10 +139,10 @@ public class QueueingScheduler implements Runnable {
                 Instant sleepUntil = Instant.now().plus(IDLE_CHECK_INTERVAL);
 
                 if (canStartNextTask) {
-                    Map.Entry<Class<? extends Task>, Instant> nextTask = schedule.entrySet()
-                                                                                 .stream()
-                                                                                 .min(Map.Entry.comparingByValue())
-                                                                                 .orElse(null);
+                    Map.Entry<String, Instant> nextTask = schedule.entrySet()
+                                                                  .stream()
+                                                                  .min(Map.Entry.comparingByValue())
+                                                                  .orElse(null);
 
                     LOGGER.debug("next task: {}", nextTask);
 
@@ -153,16 +157,16 @@ public class QueueingScheduler implements Runnable {
                         } else {
                             LOGGER.debug("next task {} is due (time until start: {})", nextTask, timeUntilStart);
 
-                            Class<? extends Task> clazz = nextTask.getKey();
-                            Task task = instantiateTask(clazz);
+                            String taskName = nextTask.getKey();
+                            Task task = instantiateTask(taskName);
                             if (task == null) {
-                                LOGGER.warn("postponing {} for {} due to failed construction", clazz, FAILED_RETRY);
-                                schedule.put(clazz, Instant.now().plus(FAILED_RETRY));
+                                LOGGER.warn("postponing {} for {} due to failed construction", taskName, FAILED_RETRY);
+                                schedule.put(taskName, Instant.now().plus(FAILED_RETRY));
                                 continue; // check next entry
                             }
 
-                            LOGGER.info("starting task {}", clazz);
-                            runningTask.set(new TaskExecution(task, schedule));
+                            LOGGER.info("starting task {}", taskName);
+                            runningTask.set(new TaskExecution(taskName, task, schedule));
                         }
                     }
                 }
@@ -186,23 +190,42 @@ public class QueueingScheduler implements Runnable {
     }
 
     public void trigger(Class<? extends Task> clazz) {
+        trigger(clazz.getCanonicalName());
+    }
+
+    public void trigger(String name) {
         synchronized (schedule) {
-            if (!schedule.containsKey(clazz)) {
-                throw new IllegalArgumentException("class has not been scheduled: " + clazz.getCanonicalName());
+            if (!schedule.containsKey(name)) {
+                throw new IllegalArgumentException("task has not been scheduled: " + name);
             }
 
-            schedule.put(clazz, Instant.now());
+            schedule.put(name, Instant.now());
             schedule.notifyAll();
         }
     }
 
     public void schedule(Class<? extends Task> clazz, Instant wantedStart, Duration repeatInterval) {
-        synchronized (repeatIntervals) {
-            repeatIntervals.put(clazz, repeatInterval);
+        try {
+            scheduleInternally(clazz.getCanonicalName(), clazz.getDeclaredConstructor()::newInstance, wantedStart, repeatInterval);
+        } catch (NoSuchMethodException ex) {
+            throw new IllegalArgumentException("classes without a supplier must have a default constructor");
         }
+    }
 
+    public void schedule(String name, ThrowingSupplier<? extends Task, ?> supplier, Instant wantedStart, Duration repeatInterval) {
+        scheduleInternally(name, supplier, wantedStart, repeatInterval);
+    }
+
+    private void scheduleInternally(String name, ThrowingSupplier<? extends Task, ?> supplier, Instant wantedStart, Duration repeatInterval) {
         synchronized (schedule) {
-            schedule.put(clazz, wantedStart);
+            if (schedule.containsKey(name)) {
+                throw new IllegalArgumentException("task " + name + " is already scheduled");
+            }
+
+            suppliers.put(name, supplier);
+            repeatIntervals.put(name, repeatInterval);
+
+            schedule.put(name, wantedStart);
             schedule.notifyAll();
         }
     }
@@ -217,13 +240,19 @@ public class QueueingScheduler implements Runnable {
         execution.cancelAsync();
     }
 
-    private Task instantiateTask(Class<? extends Task> clazz) {
+    private Task instantiateTask(String name) {
+        ThrowingSupplier<? extends Task, ?> supplier = suppliers.get(name);
+        if (supplier == null) {
+            LOGGER.warn("{} has no supplier", name);
+            return null;
+        }
+
         try {
-            Task task = clazz.getDeclaredConstructor().newInstance();
+            Task task = supplier.get();
             task.setScheduler(this);
             return task;
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
-            LOGGER.warn("{} failed construction", clazz, ex);
+        } catch (Exception ex) {
+            LOGGER.warn("{} failed instantiation", name, ex);
             return null;
         }
     }
