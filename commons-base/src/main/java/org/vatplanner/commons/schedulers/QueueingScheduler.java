@@ -12,6 +12,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vatplanner.commons.utils.ThrowingSupplier;
 
+/**
+ * A scheduler that runs multiple tasks in series. Tasks can be scheduled to repeat at an interval from last
+ * termination. Other than default Java implementations, tasks can also be requested to be triggered "now". Any longer
+ * pending entries will still be executed, however. Although separate threads are used, only at most one task is
+ * being executed at a time.
+ * <p>
+ * {@link Task} needs to be extended by all tasks to be queued. All tasks are expected to take care of necessary
+ * timeouts themselves and should check for requested cancellation at reasonable intervals through
+ * {@link Task#isCancelled()}. Follow-up tasks can be scheduled through the reference returned by
+ * {@link Task#getScheduler()}.
+ * </p>
+ * <p>
+ * Basic tasks can be scheduled and triggered by just referring to the {@link Task} class, which will be translated to
+ * the implementation's class name and default constructor. In case that is not sufficient, tasks can alternatively
+ * be specified by a specific name and instance supplier.
+ * </p>
+ * <p>
+ * The scheduler needs to be explicitly {@link #start()}ed, which can be used to defer execution until the schedule
+ * has been defined. {@link #shutdownAsync()} or {@link #shutdownAndWait(Duration)} should be called to stop processing,
+ * e.g. when the surrounding application shuts down or gets restarted. Once shut down, the scheduler cannot be reused.
+ * </p>
+ */
 public class QueueingScheduler implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueueingScheduler.class);
 
@@ -26,6 +48,9 @@ public class QueueingScheduler implements Runnable {
     private static final Duration FAILED_RETRY = Duration.ofMinutes(5);
     private static final Duration IDLE_CHECK_INTERVAL = Duration.ofSeconds(1);
 
+    /**
+     * Controls the {@link Thread}ed execution of a {@link Task}.
+     */
     private static class TaskExecution implements Runnable {
         private final Thread thread;
         private final String taskName;
@@ -78,6 +103,17 @@ public class QueueingScheduler implements Runnable {
         }
     }
 
+    /**
+     * A task to be run by a {@link QueueingScheduler}. {@link #run()} will be executed in a separate thread.
+     * <p>
+     * A new instance is created for each planned execution. Implementations must expect to only run at most once and
+     * may in fact not be run at all.
+     * </p>
+     * <p>
+     * Longer running operations should ensure a reasonable timeout and check {@link #isCancelled()} at reasonable
+     * intervals.
+     * </p>
+     */
     public abstract static class Task implements Runnable {
         private final AtomicBoolean isCancelled = new AtomicBoolean();
         private final AtomicReference<QueueingScheduler> scheduler = new AtomicReference<>();
@@ -86,6 +122,14 @@ public class QueueingScheduler implements Runnable {
             this.scheduler.set(scheduler);
         }
 
+        /**
+         * Returns the {@link QueueingScheduler}. This is useful to e.g. trigger follow-up tasks.
+         * <p>
+         * Must only be called during execution ({@link #run()}), not at construction time.
+         * </p>
+         *
+         * @return the scheduler managing this task
+         */
         public QueueingScheduler getScheduler() {
             QueueingScheduler res = scheduler.get();
             if (res == null) {
@@ -94,6 +138,11 @@ public class QueueingScheduler implements Runnable {
             return res;
         }
 
+        /**
+         * Indicates whether the task has been requested to be cancelled.
+         *
+         * @return {@code true} if the task should be cancelled, {@code false} if it should continue
+         */
         protected boolean isCancelled() {
             return isCancelled.get();
         }
@@ -189,10 +238,22 @@ public class QueueingScheduler implements Runnable {
         LOGGER.info("scheduler terminated");
     }
 
+    /**
+     * Reschedules the specified task to be run at the end of currently due executions.
+     * The task will not be rescheduled if next execution is already due.
+     *
+     * @param clazz task to be rescheduled
+     */
     public void trigger(Class<? extends Task> clazz) {
         trigger(clazz.getCanonicalName());
     }
 
+    /**
+     * Reschedules the specified task to be run at the end of currently due executions.
+     * The task will not be rescheduled if next execution is already due.
+     *
+     * @param name task to be rescheduled
+     */
     public void trigger(String name) {
         synchronized (schedule) {
             if (!schedule.containsKey(name)) {
@@ -211,6 +272,14 @@ public class QueueingScheduler implements Runnable {
         }
     }
 
+    /**
+     * Schedules the specified task to be run according to given parameters.
+     *
+     * @param clazz          task to be scheduled; must implement default constructor
+     * @param wantedStart    time of first execution to be scheduled
+     * @param repeatInterval interval to repeat the task at, measured from time of last finished execution
+     * @see #schedule(String, ThrowingSupplier, Instant, Duration)
+     */
     public void schedule(Class<? extends Task> clazz, Instant wantedStart, Duration repeatInterval) {
         try {
             schedule(clazz.getCanonicalName(), clazz.getDeclaredConstructor()::newInstance, wantedStart, repeatInterval);
@@ -219,6 +288,14 @@ public class QueueingScheduler implements Runnable {
         }
     }
 
+    /**
+     * Schedules the specified task to be run according to given parameters.
+     *
+     * @param name           unique identification of the task to be scheduled
+     * @param supplier       supplier creating a new instance of the {@link Task}
+     * @param wantedStart    time of first execution to be scheduled
+     * @param repeatInterval interval to repeat the task at, measured from time of last finished execution
+     */
     public void schedule(String name, ThrowingSupplier<? extends Task, ?> supplier, Instant wantedStart, Duration repeatInterval) {
         synchronized (schedule) {
             if (schedule.containsKey(name)) {
@@ -260,6 +337,9 @@ public class QueueingScheduler implements Runnable {
         }
     }
 
+    /**
+     * Starts the scheduler.
+     */
     public void start() {
         if (!schedulerThread.compareAndSet(null, new Thread(this))) {
             // already started
@@ -277,6 +357,9 @@ public class QueueingScheduler implements Runnable {
         thread.start();
     }
 
+    /**
+     * Shuts the scheduler down without blocking. Any running task will be cancelled.
+     */
     public void shutdownAsync() {
         LOGGER.info("requesting shutdown");
         shouldShutdown.set(true);
@@ -294,6 +377,14 @@ public class QueueingScheduler implements Runnable {
         }
     }
 
+    /**
+     * Shuts the scheduler down and waits until complete or the given timeout expires.
+     * If a task is currently being executed, termination cancels the task and waits for it to finish.
+     *
+     * @param timeout maximum time to wait for shutdown to complete
+     * @return {@code true} if shutdown completed within the timeout, {@code false} if the scheduler and/or a final task may still be running
+     * @throws InterruptedException if interrupted while waiting
+     */
     public boolean shutdownAndWait(Duration timeout) throws InterruptedException {
         Instant startOfShutdown = Instant.now();
 
@@ -325,6 +416,9 @@ public class QueueingScheduler implements Runnable {
         return true;
     }
 
+    /**
+     * Indicates that a call happened out of specified sequence.
+     */
     private static class OutOfSequence extends RuntimeException {
         OutOfSequence(String msg) {
             super(msg);
