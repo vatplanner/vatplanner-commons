@@ -45,8 +45,8 @@ public class QueueingScheduler implements Runnable {
     private final AtomicReference<Thread> schedulerThread = new AtomicReference<>();
     private final AtomicBoolean shouldShutdown = new AtomicBoolean();
 
-    private static final Duration FAILED_RETRY = Duration.ofMinutes(5);
-    private static final Duration IDLE_CHECK_INTERVAL = Duration.ofSeconds(1);
+    private final AtomicReference<Duration> failedRetryInterval = new AtomicReference<>(Duration.ofMinutes(5));
+    private final AtomicReference<Duration> idleCheckInterval = new AtomicReference<>(Duration.ofSeconds(30));
 
     /**
      * Controls the {@link Thread}ed execution of a {@link Task}.
@@ -169,7 +169,7 @@ public class QueueingScheduler implements Runnable {
                 boolean failed = (previousTask.exception.get() != null);
                 if (failed) {
                     LOGGER.warn("task {} has failed, applying retry interval", taskName);
-                    interval = FAILED_RETRY;
+                    interval = failedRetryInterval.get();
                 }
 
                 if (interval == null) {
@@ -185,7 +185,7 @@ public class QueueingScheduler implements Runnable {
             }
 
             synchronized (schedule) {
-                Instant sleepUntil = Instant.now().plus(IDLE_CHECK_INTERVAL);
+                Instant sleepUntil = Instant.now().plus(idleCheckInterval.get());
 
                 if (canStartNextTask) {
                     Map.Entry<String, Instant> nextTask = schedule.entrySet()
@@ -209,8 +209,9 @@ public class QueueingScheduler implements Runnable {
                             String taskName = nextTask.getKey();
                             Task task = instantiateTask(taskName);
                             if (task == null) {
-                                LOGGER.warn("postponing {} for {} due to failed construction", taskName, FAILED_RETRY);
-                                schedule.put(taskName, Instant.now().plus(FAILED_RETRY));
+                                Instant retryTime = Instant.now().plus(failedRetryInterval.get());
+                                LOGGER.warn("postponing {} until {} due to failed construction", taskName, retryTime);
+                                schedule.put(taskName, retryTime);
                                 continue; // check next entry
                             }
 
@@ -414,6 +415,39 @@ public class QueueingScheduler implements Runnable {
         }
 
         return true;
+    }
+
+    /**
+     * Sets the interval used to retry execution if a task failed.
+     *
+     * @param interval interval to retry failed tasks at
+     * @return same instance for method-chaining
+     */
+    public QueueingScheduler setFailedRetryInterval(Duration interval) {
+        if (interval.compareTo(Duration.ZERO) <= 0) {
+            throw new IllegalArgumentException("intervals must be greater than 0");
+        }
+
+        failedRetryInterval.set(interval);
+
+        return this;
+    }
+
+    /**
+     * Sets the regular interval at which the {@link QueueingScheduler} should wake up to re-evaluate execution and
+     * check for shutdown.
+     *
+     * @param interval interval to wake up scheduler for re-evaluation
+     * @return same instance for method-chaining
+     */
+    public QueueingScheduler setIdleCheckInterval(Duration interval) {
+        if (interval.compareTo(Duration.ZERO) <= 0) {
+            throw new IllegalArgumentException("intervals must be greater than 0");
+        }
+
+        idleCheckInterval.set(interval);
+
+        return this;
     }
 
     /**
