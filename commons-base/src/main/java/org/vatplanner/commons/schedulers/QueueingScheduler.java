@@ -279,6 +279,14 @@ public class QueueingScheduler implements Runnable {
         shouldShutdown.set(true);
 
         synchronized (schedule) {
+            // suppliers may hold references that should be lost ASAP, e.g. if a surrounding application controller
+            // shuts down or restarts
+            suppliers.clear();
+
+            // we don't want to start anything new, so just for good measure we can clear all other info as well
+            repeatIntervals.clear();
+            schedule.clear();
+
             schedule.notifyAll();
         }
     }
