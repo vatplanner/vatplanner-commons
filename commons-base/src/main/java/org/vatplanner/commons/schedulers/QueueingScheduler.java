@@ -322,6 +322,10 @@ public class QueueingScheduler implements Runnable {
      */
     public void schedule(String name, ThrowingSupplier<? extends Task, ?> supplier, Instant wantedStart, Duration repeatInterval) {
         synchronized (schedule) {
+            if (shouldShutdown.get()) {
+                throw new OutOfSequence("scheduler has been requested to shutdown, new tasks can no longer be scheduled");
+            }
+
             if (schedule.containsKey(name)) {
                 throw new IllegalArgumentException("task " + name + " is already scheduled");
             }
