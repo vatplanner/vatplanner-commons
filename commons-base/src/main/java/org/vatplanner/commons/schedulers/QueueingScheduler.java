@@ -24,8 +24,8 @@ import org.vatplanner.commons.utils.ThrowingSupplier;
  * {@link Task#getScheduler()}.
  * </p>
  * <p>
- * Basic tasks can be scheduled and triggered by just referring to the {@link Task} class, which will be translated to
- * the implementation's class name and default constructor. In case that is not sufficient, tasks can alternatively
+ * Basic tasks can be (re)scheduled and triggered by just referring to the {@link Task} class, which will be translated
+ * to the implementation's class name and default constructor. In case that is not sufficient, tasks can alternatively
  * be specified by a specific name and instance supplier.
  * </p>
  * <p>
@@ -175,9 +175,8 @@ public class QueueingScheduler implements Runnable {
                 if (interval == null) {
                     LOGGER.info("task {} finished, not rescheduling (no interval configured)", taskName);
                 } else {
-                    Instant nextRun = Instant.now().plus(interval);
-                    schedule.put(taskName, nextRun);
-                    LOGGER.info("task {} finished, rescheduled for {}", taskName, nextRun);
+                    Instant nextRun = rescheduleIfEarlier(taskName, Instant.now().plus(interval));
+                    LOGGER.info("task {} finished, next execution scheduled for {}", taskName, nextRun);
                 }
 
                 runningTask.set(null);
@@ -216,6 +215,7 @@ public class QueueingScheduler implements Runnable {
                             }
 
                             LOGGER.info("starting task {}", taskName);
+                            schedule.remove(taskName); // expired; will be re-added via rescheduleIfEarlier when finished
                             runningTask.set(new TaskExecution(taskName, task, schedule));
                         }
                     }
@@ -256,21 +256,44 @@ public class QueueingScheduler implements Runnable {
      * @param name task to be rescheduled
      */
     public void trigger(String name) {
+        rescheduleIfEarlier(name, Instant.now());
+    }
+
+    /**
+     * Reschedules the given task to be executed at the given time, if earlier than previously scheduled.
+     *
+     * @param clazz task to be rescheduled
+     * @param time  time to schedule execution for, only applied if earlier than already scheduled time
+     * @return the scheduled time of next execution
+     */
+    public Instant rescheduleIfEarlier(Class<? extends Task> clazz, Instant time) {
+        return rescheduleIfEarlier(clazz.getCanonicalName(), time);
+    }
+
+    /**
+     * Reschedules the given task to be executed at the given time, if earlier than previously scheduled.
+     *
+     * @param name task to be rescheduled
+     * @param time time to schedule execution for, only applied if earlier than already scheduled time
+     * @return the scheduled time of next execution
+     */
+    public Instant rescheduleIfEarlier(String name, Instant time) {
         synchronized (schedule) {
-            if (!schedule.containsKey(name)) {
-                throw new IllegalArgumentException("task has not been scheduled: " + name);
+            if (!suppliers.containsKey(name)) {
+                throw new IllegalArgumentException("task has not been registered: " + name);
             }
 
-            Instant now = Instant.now();
-            boolean alreadyDue = schedule.get(name).isBefore(now);
-            if (alreadyDue) {
-                // do not reschedule as it would actually delay execution further
-                return;
+            Instant previousTime = schedule.get(name);
+            if ((previousTime != null) && previousTime.isBefore(time)) {
+                // do not reschedule as it would delay execution
+                return previousTime;
             }
 
-            schedule.put(name, now);
+            schedule.put(name, time);
             schedule.notifyAll();
         }
+
+        return time;
     }
 
     /**
