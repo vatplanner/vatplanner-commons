@@ -206,17 +206,13 @@ public class QueueingScheduler implements Runnable {
 
     public void schedule(Class<? extends Task> clazz, Instant wantedStart, Duration repeatInterval) {
         try {
-            scheduleInternally(clazz.getCanonicalName(), clazz.getDeclaredConstructor()::newInstance, wantedStart, repeatInterval);
+            schedule(clazz.getCanonicalName(), clazz.getDeclaredConstructor()::newInstance, wantedStart, repeatInterval);
         } catch (NoSuchMethodException ex) {
             throw new IllegalArgumentException("classes without a supplier must have a default constructor");
         }
     }
 
     public void schedule(String name, ThrowingSupplier<? extends Task, ?> supplier, Instant wantedStart, Duration repeatInterval) {
-        scheduleInternally(name, supplier, wantedStart, repeatInterval);
-    }
-
-    private void scheduleInternally(String name, ThrowingSupplier<? extends Task, ?> supplier, Instant wantedStart, Duration repeatInterval) {
         synchronized (schedule) {
             if (schedule.containsKey(name)) {
                 throw new IllegalArgumentException("task " + name + " is already scheduled");
