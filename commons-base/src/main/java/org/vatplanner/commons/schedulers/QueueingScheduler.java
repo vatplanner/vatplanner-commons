@@ -199,7 +199,14 @@ public class QueueingScheduler implements Runnable {
                 throw new IllegalArgumentException("task has not been scheduled: " + name);
             }
 
-            schedule.put(name, Instant.now());
+            Instant now = Instant.now();
+            boolean alreadyDue = schedule.get(name).isBefore(now);
+            if (alreadyDue) {
+                // do not reschedule as it would actually delay execution further
+                return;
+            }
+
+            schedule.put(name, now);
             schedule.notifyAll();
         }
     }
