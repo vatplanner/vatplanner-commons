@@ -26,7 +26,7 @@ public abstract class VCSRepositoryControl implements Closeable {
      * @return an instance to control the specified repository; must be closed when finished
      */
     public static VCSRepositoryControl forConfiguration(Properties config) {
-        return forConfiguration(config, "");
+        return forConfiguration(prepareConfiguration(config));
     }
 
     /**
@@ -37,11 +37,44 @@ public abstract class VCSRepositoryControl implements Closeable {
      * @return an instance to control the specified repository; must be closed when finished
      */
     public static VCSRepositoryControl forConfiguration(Properties config, String configKeyPrefix) {
-        return forConfiguration(new VCSRepositoryConfiguration(config, configKeyPrefix));
+        return forConfiguration(prepareConfiguration(config, configKeyPrefix));
     }
 
-    private static VCSRepositoryControl forConfiguration(VCSRepositoryConfiguration config) {
+    /**
+     * Creates a new control instance handling the configured repository.
+     *
+     * @param config a previously prepared configuration
+     * @return an instance to control the specified repository; must be closed when finished
+     */
+    public static VCSRepositoryControl forConfiguration(VCSRepositoryConfiguration config) {
         return findFactory(config.getSystem()).createFromConfiguration(config);
+    }
+
+    /**
+     * Prepares a {@link VCSRepositoryConfiguration} from given {@link Properties} for later use.
+     * <p>
+     * The returned configuration is not fully validated, using it may fail.
+     * </p>
+     *
+     * @param config configuration as documented in {@link VCSRepositoryConfiguration}
+     * @return repository configuration for later use, not fully validated
+     */
+    public static VCSRepositoryConfiguration prepareConfiguration(Properties config) {
+        return prepareConfiguration(config, "");
+    }
+
+    /**
+     * Prepares a {@link VCSRepositoryConfiguration} from given {@link Properties} for later use.
+     * <p>
+     * The returned configuration is not fully validated, using it may fail.
+     * </p>
+     *
+     * @param config          configuration as documented in {@link VCSRepositoryConfiguration}
+     * @param configKeyPrefix an extra prefix that will be added in front of all configuration keys
+     * @return repository configuration for later use, not fully validated
+     */
+    public static VCSRepositoryConfiguration prepareConfiguration(Properties config, String configKeyPrefix) {
+        return new VCSRepositoryConfiguration(config, configKeyPrefix);
     }
 
     private static VCSRepositoryControlFactory findFactory(String wantedSystem) {
