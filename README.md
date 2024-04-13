@@ -21,7 +21,7 @@ project:
   of the VATPlanner project which means some (if not most) functionality may be insufficient and maybe not even
   cryptographically sane when used in other scopes.
 - `vatplanner-commons-adapter-jgit` adds implementations to connect common interfaces to Eclipse JGit™ for handling
-  Git® repository access (implemented: `FileAccessProvider`). \
+  Git® repository access (implemented: `FileAccessProvider` and `VCSRepositoryControl`). \
   Note that this is only a bridge to such repositories using the implementation provided by the upstream project.
   This module shall not be confused with any of the mentioned projects or organizations, see the Acknowledgements
   section below for more information.
