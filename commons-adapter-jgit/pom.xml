@@ -9,10 +9,14 @@
         <version>0.1-SNAPSHOT</version>
     </parent>
 
-    <name>VATPlanner Commons File Access using Eclipse JGit™</name>
+    <name>VATPlanner Commons adapter to Eclipse JGit™</name>
 
-    <artifactId>vatplanner-commons-fileaccess-jgit</artifactId>
+    <artifactId>vatplanner-commons-adapter-jgit</artifactId>
     <packaging>jar</packaging>
+
+    <properties>
+        <autoService.version>1.1.1</autoService.version>
+    </properties>
 
     <dependencies>
         <dependency>

@@ -13,7 +13,7 @@
         <module>commons-base</module>
         <module>commons-amqp</module>
         <module>commons-crypto</module>
-        <module>commons-fileaccess-jgit</module>
+        <module>commons-adapter-jgit</module>
     </modules>
 
     <properties>
