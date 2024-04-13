@@ -147,7 +147,7 @@ public class QueueingScheduler implements Runnable {
             return isCancelled.get();
         }
 
-        private void cancel() {
+        protected void cancel() {
             isCancelled.set(true);
         }
     }
