@@ -187,9 +187,13 @@ public class PGCryptor implements Cryptor {
             }
         }
 
-        File keyBaseDir = new File(config.getProperty(CONFIG_KEY_BASE_DIRECTORY));
-        String signingKeyFilePath = config.getProperty(CONFIG_KEY_SIGNING_KEY);
+        String keyBaseDirPath = config.getProperty(CONFIG_KEY_BASE_DIRECTORY);
+        if (keyBaseDirPath == null) {
+            throw new IllegalArgumentException("configuration is missing " + CONFIG_KEY_BASE_DIRECTORY);
+        }
+        File keyBaseDir = new File(keyBaseDirPath);
 
+        String signingKeyFilePath = config.getProperty(CONFIG_KEY_SIGNING_KEY);
         if (signingKeyFilePath == null) {
             return new PGCryptor(keyBaseDir, secretKeyRingProtector);
         } else {
