@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,6 +45,7 @@ import org.pgpainless.key.parsing.KeyRingReader;
 import org.pgpainless.key.protection.SecretKeyRingProtector;
 import org.pgpainless.util.ArmoredInputStreamFactory;
 import org.pgpainless.util.MultiMap;
+import org.pgpainless.util.Passphrase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vatplanner.commons.utils.Bytes;
@@ -72,6 +74,10 @@ public class PGCryptor implements Cryptor {
     private static final FilenameFilter FILTER_SECRET_KEYS = (dir, name) -> name.toLowerCase().endsWith(".sec") || name.toLowerCase().endsWith(".sec.asc");
 
     private static final AtomicReference<KeySet> activeKeySet = new AtomicReference<>();
+
+    private static final String CONFIG_KEY_PASSPHRASE_FILE = "keys.passphraseFile";
+    private static final String CONFIG_KEY_BASE_DIRECTORY = "keys.baseDir";
+    private static final String CONFIG_KEY_SIGNING_KEY = "keys.signingKey";
 
     /**
      * Size of random bytes to generate for key set self-test.
@@ -154,6 +160,41 @@ public class PGCryptor implements Cryptor {
      */
     public PGCryptor(File baseDirectory, File signingKeyFile, SecretKeyRingProtector secretKeyRingProtector) {
         reconfigure(baseDirectory, signingKeyFile, secretKeyRingProtector);
+    }
+
+    /**
+     * Creates a new instance from given textual configuration.
+     * <p>
+     * Supported options:
+     * </p>
+     * <ul>
+     * <li>{@value CONFIG_KEY_BASE_DIRECTORY} must point to the base directory as required by the constructor</li>
+     * <li>{@value CONFIG_KEY_PASSPHRASE_FILE} should point to a file holding the passphrase to unlock private keys; leave undefined if keys are unlocked</li>
+     * <li>{@value CONFIG_KEY_SIGNING_KEY} can optionally points to a specific file holding the key to be used to sign</li>
+     * </ul>
+     *
+     * @param config configuration as described above
+     * @return configured instance
+     */
+    public static PGCryptor fromConfig(Properties config) {
+        SecretKeyRingProtector secretKeyRingProtector = SecretKeyRingProtector.unprotectedKeys();
+        String passphraseFilePath = config.getProperty(CONFIG_KEY_PASSPHRASE_FILE);
+        if (passphraseFilePath != null) {
+            try {
+                SecretKeyRingProtector.unlockAnyKeyWith(Passphrase.fromPassword(Files.readAllLines(new File(passphraseFilePath).toPath()).iterator().next()));
+            } catch (IOException ex) {
+                throw new CryptoFailure("Failed to read passphrase from " + passphraseFilePath, ex);
+            }
+        }
+
+        File keyBaseDir = new File(config.getProperty(CONFIG_KEY_BASE_DIRECTORY));
+        String signingKeyFilePath = config.getProperty(CONFIG_KEY_SIGNING_KEY);
+
+        if (signingKeyFilePath == null) {
+            return new PGCryptor(keyBaseDir, secretKeyRingProtector);
+        } else {
+            return new PGCryptor(keyBaseDir, new File(signingKeyFilePath), secretKeyRingProtector);
+        }
     }
 
     /**
