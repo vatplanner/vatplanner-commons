@@ -82,6 +82,24 @@ public class JGitFileAccessProvider implements FileAccessProvider.RandomAccess {
     }
 
     /**
+     * Instantiates a new {@link FileAccessProvider} for the repository at given location and at given commit.
+     * <p>
+     * The repository should not be modified while this instance is being used.
+     * </p>
+     * <p>
+     * If possible, use of method-chained fluent interface is recommended. This constructor should only be used
+     * in case a bare repository is handled which does not have a HEAD revision.
+     * </p>
+     *
+     * @param repositoryPath path to non-empty repository; must be root or metadata directory
+     * @param refString      ref string identifying the wanted commit
+     */
+    public JGitFileAccessProvider(File repositoryPath, String refString) {
+        this.repository = findRepository(repositoryPath);
+        this.revTree = findTreeForCommit(refString);
+    }
+
+    /**
      * Instantiates a new {@link FileAccessProvider} for the given {@link Repository}.
      * <p>
      * If the {@link Repository} is accessed concurrently outside this implementation, all access to it must be
@@ -106,7 +124,14 @@ public class JGitFileAccessProvider implements FileAccessProvider.RandomAccess {
             }
         }
 
-        this.revTree = findTreeForCommit("HEAD");
+        try {
+            this.revTree = findTreeForCommit("HEAD");
+        } catch (Exception ex) {
+            throw new RepositoryAccessFailed(
+                "Failed to find HEAD revision; check if the repository exists. In case it is bare, direct specification of a refString may be required.",
+                ex
+            );
+        }
     }
 
     private JGitFileAccessProvider(Repository repository, RevTree revTree) {
