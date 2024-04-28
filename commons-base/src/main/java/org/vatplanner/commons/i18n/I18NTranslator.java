@@ -1,5 +1,6 @@
 package org.vatplanner.commons.i18n;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -27,7 +28,7 @@ public class I18NTranslator {
 
         Throwable lastProcessingCause = null;
 
-        for (Locale locale : locales) {
+        for (Locale locale : withFallbackToDefault(locales)) {
             List<I18NFragment> fragments = messagesByLocale.get(locale);
             if (fragments == null) {
                 // message is not defined, try next locale
@@ -68,5 +69,14 @@ public class I18NTranslator {
                 lastProcessingCause
             );
         }
+    }
+
+    private static List<Locale> withFallbackToDefault(Locale[] locales) {
+        List<Locale> list = new ArrayList<>();
+        for (Locale locale : locales) {
+            list.add(locale);
+        }
+        list.add(null);
+        return list;
     }
 }
