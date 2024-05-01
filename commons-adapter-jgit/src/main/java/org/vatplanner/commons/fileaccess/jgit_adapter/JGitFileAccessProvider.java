@@ -28,6 +28,8 @@ import org.vatplanner.commons.fileaccess.AccessPath;
 import org.vatplanner.commons.fileaccess.FileAccessProvider;
 import org.vatplanner.commons.fileaccess.FileHolder;
 import org.vatplanner.commons.fileaccess.FileInfo;
+import org.vatplanner.commons.vcs.VCSRepositoryConfiguration;
+import org.vatplanner.commons.vcs.jgit_adapter.JGitVCSRepositoryControl;
 
 /**
  * Provides access to files in Git&reg; repositories through Eclipse JGit&trade;.
@@ -97,6 +99,44 @@ public class JGitFileAccessProvider implements FileAccessProvider.RandomAccess {
     public JGitFileAccessProvider(File repositoryPath, String refString) {
         this.repository = findRepository(repositoryPath);
         this.revTree = findTreeForCommit(refString);
+    }
+
+    /**
+     * Instantiates a new {@link FileAccessProvider} for the repository described by the given
+     * {@link VCSRepositoryConfiguration}. If the configured branch/revision is unavailable, it will be
+     * assumed to have been synced as a bare repository which requires the full remote branch name to be
+     * used.
+     * <p>
+     * The repository should not be modified while this instance is being used.
+     * </p>
+     *
+     * @param configuration configuration describing repository storage location and initial revision
+     */
+    public JGitFileAccessProvider(VCSRepositoryConfiguration configuration) {
+        if (!"git".equals(configuration.getSystem())) {
+            throw new IllegalArgumentException("VCS repository is not configured for system 'git'");
+        }
+
+        File repositoryPath = configuration.getStorage();
+        repository = findRepository(repositoryPath);
+
+        RevTree revTree = null;
+        String refString = configuration.getBranch().orElse("HEAD");
+        try {
+            revTree = findTreeForCommit(refString);
+        } catch (Exception ex) {
+            LOGGER.debug("\"{}\" does not exist in repository {}, trying with default remote name", refString, repositoryPath, ex);
+        }
+
+        if (revTree == null) {
+            try {
+                revTree = findTreeForCommit("remotes/" + JGitVCSRepositoryControl.DEFAULT_REMOTE_NAME + "/" + refString);
+            } catch (Exception ex) {
+                throw new RepositoryAccessFailed("\"" + refString + "\" does not exist in repository " + repositoryPath, ex);
+            }
+        }
+
+        this.revTree = revTree;
     }
 
     /**

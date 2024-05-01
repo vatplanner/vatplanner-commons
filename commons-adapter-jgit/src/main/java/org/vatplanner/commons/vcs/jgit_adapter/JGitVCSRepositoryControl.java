@@ -63,7 +63,7 @@ public class JGitVCSRepositoryControl extends VCSRepositoryControl {
     private static final Logger LOGGER = LoggerFactory.getLogger(JGitVCSRepositoryControl.class);
 
     private static final String SYSTEM = "git";
-    private static final String DEFAULT_REMOTE_NAME = "_" + JGitVCSRepositoryControl.class.getSimpleName();
+    public static final String DEFAULT_REMOTE_NAME = "_" + JGitVCSRepositoryControl.class.getSimpleName();
 
     private final URIish upstreamLocation;
     private final Repository repo;
