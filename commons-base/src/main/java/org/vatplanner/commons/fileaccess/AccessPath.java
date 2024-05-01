@@ -1,6 +1,7 @@
 package org.vatplanner.commons.fileaccess;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -116,6 +117,30 @@ public class AccessPath {
 
         // non-recursive check requires exact child
         return thisIsParent && (this.pathSegments.size() == (other.pathSegments.size() - 1));
+    }
+
+    /**
+     * Creates a new {@link AccessPath} describing a file location.
+     *
+     * @param pathSegments path to file; must not be empty
+     * @return path describing file location
+     */
+    public static AccessPath forFile(String... pathSegments) {
+        if (pathSegments.length < 1) {
+            throw new IllegalArgumentException("no path segments specified");
+        }
+
+        return new AccessPath(Arrays.asList(pathSegments), Type.FILE);
+    }
+
+    /**
+     * Creates a new {@link AccessPath} describing a directory location.
+     *
+     * @param pathSegments path to directory
+     * @return path describing directory location
+     */
+    public static AccessPath forDirectory(String... pathSegments) {
+        return new AccessPath(Arrays.asList(pathSegments), Type.DIRECTORY);
     }
 
     @Override
