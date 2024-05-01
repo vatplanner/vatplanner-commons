@@ -64,7 +64,7 @@ public class I18NTranslator {
         } else {
             throw new IllegalArgumentException(
                 "formatting failed for all locales " + Arrays.stream(locales).map(Objects::toString).collect(Collectors.joining(", "))
-                    + ", messageKey=" + messageKey + "; stracktrace describes last formatting failure: "
+                    + ", messageKey=" + messageKey + "; stacktrace describes last formatting failure: "
                     + lastProcessingCause.getMessage(),
                 lastProcessingCause
             );
