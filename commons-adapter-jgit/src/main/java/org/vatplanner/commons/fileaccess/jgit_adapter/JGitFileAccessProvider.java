@@ -254,6 +254,9 @@ public class JGitFileAccessProvider implements FileAccessProvider.RandomAccess {
             // findRef succeeds for "meta refs" like HEAD but returns null for commit hashes,
             // on the other hand "meta refs" cannot be found by just parsing them to ObjectIds
             ObjectId objectId = (ref != null) ? ref.getObjectId() : ObjectId.fromString(refString);
+            if (objectId == null) {
+                throw new RepositoryAccessFailed("No object ID found for ref string \"" + refString + "\" on repository " + repository.getDirectory());
+            }
 
             try (RevWalk revWalk = new RevWalk(repository)) {
                 return revWalk.parseCommit(objectId).getTree();
