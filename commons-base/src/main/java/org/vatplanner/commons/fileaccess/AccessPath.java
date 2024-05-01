@@ -145,7 +145,7 @@ public class AccessPath {
 
     @Override
     public String toString() {
-        return "FileAccessPath(type=" + type.name()
+        return "AccessPath(type=" + type.name()
             + ", pathSegments=[" + pathSegments.stream()
                                                .collect(Collectors.joining("\", \"", "\"", "\""))
             + "])";
