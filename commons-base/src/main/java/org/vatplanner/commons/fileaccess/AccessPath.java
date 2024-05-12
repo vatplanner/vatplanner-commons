@@ -134,6 +134,29 @@ public class AccessPath {
     }
 
     /**
+     * Creates a new {@link AccessPath} describing a file location underneath base path.
+     *
+     * @param basePath     directory path to start from
+     * @param pathSegments path to file as continued underneath the base path; must not be empty
+     * @return path describing file location
+     */
+    public static AccessPath forFile(AccessPath basePath, String... pathSegments) {
+        if (pathSegments.length < 1) {
+            throw new IllegalArgumentException("no path segments specified");
+        }
+
+        if (basePath.getType() == Type.FILE) {
+            throw new IllegalArgumentException("base path is a file: " + basePath);
+        }
+
+        ArrayList<String> allPathSegments = new ArrayList<>();
+        allPathSegments.addAll(basePath.getPathSegments());
+        allPathSegments.addAll(Arrays.asList(pathSegments));
+
+        return new AccessPath(allPathSegments, Type.FILE);
+    }
+
+    /**
      * Creates a new {@link AccessPath} describing a directory location.
      *
      * @param pathSegments path to directory
