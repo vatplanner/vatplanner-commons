@@ -49,4 +49,46 @@ public class Streams {
 
         return out.build();
     }
+
+    /**
+     * Generates a {@link Stream} of elements from the given {@link Iterable} with odd and even elements zipped to
+     * {@link ImmutablePair}s. The array must hold an even number of elements.
+     *
+     * @param flatValues holding an even number of elements alternating between left and right values
+     * @param <T>        type of elements
+     * @return stream of zipped elements with odd elements as left and even elements as right values
+     */
+    public static <T> Stream<ImmutablePair<T, T>> zipUnflattened(T[] flatValues) {
+        if (flatValues.length % 2 != 0) {
+            throw new IllegalArgumentException("Uneven number of elements provided (" + flatValues.length + ")");
+        }
+
+        return zipUnflattened(Arrays.asList(flatValues));
+    }
+
+    /**
+     * Generates a {@link Stream} of elements from the given {@link Iterable} with odd and even elements zipped to
+     * {@link ImmutablePair}s. The {@link Iterable} must return an even number of elements.
+     *
+     * @param flatValues holding an even number of elements alternating between left and right values
+     * @param <T>        type of elements
+     * @return stream of zipped elements with odd elements as left and even elements as right values
+     */
+    public static <T> Stream<ImmutablePair<T, T>> zipUnflattened(Iterable<T> flatValues) {
+        Stream.Builder<ImmutablePair<T, T>> out = Stream.builder();
+
+        Iterator<T> it = flatValues.iterator();
+        while (it.hasNext()) {
+            T leftValue = it.next();
+
+            if (!it.hasNext()) {
+                throw new IllegalArgumentException("Uneven number of elements provided");
+            }
+            T rightValue = it.next();
+
+            out.add(new ImmutablePair<>(leftValue, rightValue));
+        }
+
+        return out.build();
+    }
 }
