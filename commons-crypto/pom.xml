@@ -10,9 +10,34 @@
     </parent>
 
     <name>VATPlanner Commons Crypto</name>
+    <description>
+        very basic frontend to employ a stupidly simplified level of cryptography through PGP via PGPainless and Bouncy Castle - use with care,
+        security cannot be ensured
+    </description>
 
     <artifactId>vatplanner-commons-crypto</artifactId>
     <packaging>jar</packaging>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/license/mit</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/vatplanner/vatplanner-commons.git</connection>
+        <developerConnection>scm:git:ssh://github.com:vatplanner/vatplanner-commons.git</developerConnection>
+        <url>https://github.com/vatplanner/vatplanner-commons</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Daniel Neugebauer</name>
+            <email>dneuge@energiequant.de</email>
+            <url>http://www.energiequant.de/</url>
+        </developer>
+    </developers>
 
     <dependencies>
         <dependency>

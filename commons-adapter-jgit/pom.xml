@@ -10,6 +10,7 @@
     </parent>
 
     <name>VATPlanner Commons adapter to Eclipse JGit™</name>
+    <description>extension to enable Git® repository access using Eclipse JGit™ via VATPlanner Commons abstractions</description>
 
     <artifactId>vatplanner-commons-adapter-jgit</artifactId>
     <packaging>jar</packaging>
@@ -17,6 +18,27 @@
     <properties>
         <autoService.version>1.1.1</autoService.version>
     </properties>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/license/mit</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/vatplanner/vatplanner-commons.git</connection>
+        <developerConnection>scm:git:ssh://github.com:vatplanner/vatplanner-commons.git</developerConnection>
+        <url>https://github.com/vatplanner/vatplanner-commons</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Daniel Neugebauer</name>
+            <email>dneuge@energiequant.de</email>
+            <url>http://www.energiequant.de/</url>
+        </developer>
+    </developers>
 
     <dependencies>
         <dependency>

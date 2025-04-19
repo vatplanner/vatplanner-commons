@@ -10,8 +10,29 @@
     </parent>
 
     <name>VATPlanner Commons Base</name>
+    <description>VATPlanner Commons main module with minimized dependencies</description>
 
     <artifactId>vatplanner-commons-base</artifactId>
     <packaging>jar</packaging>
 
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/license/mit</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/vatplanner/vatplanner-commons.git</connection>
+        <developerConnection>scm:git:ssh://github.com:vatplanner/vatplanner-commons.git</developerConnection>
+        <url>https://github.com/vatplanner/vatplanner-commons</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Daniel Neugebauer</name>
+            <email>dneuge@energiequant.de</email>
+            <url>http://www.energiequant.de/</url>
+        </developer>
+    </developers>
 </project>

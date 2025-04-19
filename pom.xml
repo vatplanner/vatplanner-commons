@@ -7,7 +7,10 @@
     <artifactId>vatplanner-commons-parent</artifactId>
     <version>0.1-SNAPSHOT</version>
     <name>VATPlanner Commons Parent</name>
+    <description>Parent POM for VATPlanner Commons</description>
     <packaging>pom</packaging>
+
+    <url>https://github.com/vatplanner/vatplanner-commons</url>
 
     <modules>
         <module>commons-base</module>
@@ -34,9 +37,36 @@
         <mockito.version>4.11.0</mockito.version> <!-- Mockito 5 requires Java 11 -->
 
         <!-- build dependencies -->
+        <maven.plugin.compiler.version>3.14.0</maven.plugin.compiler.version>
         <maven.plugin.dependency.version>3.6.1</maven.plugin.dependency.version>
+        <maven.plugin.gpg.version>3.2.7</maven.plugin.gpg.version>
+        <maven.plugin.jar.version>3.4.2</maven.plugin.jar.version>
+        <maven.plugin.javadoc.version>3.2.0</maven.plugin.javadoc.version>
+        <maven.plugin.source.version>3.2.0</maven.plugin.source.version>
         <maven.plugin.surefire.version>3.2.5</maven.plugin.surefire.version>
+        <sonatype.plugin.centralPublishing.version>0.7.0</sonatype.plugin.centralPublishing.version>
     </properties>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/license/mit</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/vatplanner/vatplanner-commons.git</connection>
+        <developerConnection>scm:git:ssh://github.com:vatplanner/vatplanner-commons.git</developerConnection>
+        <url>https://github.com/vatplanner/vatplanner-commons</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Daniel Neugebauer</name>
+            <email>dneuge@energiequant.de</email>
+            <url>http://www.energiequant.de/</url>
+        </developer>
+    </developers>
 
     <dependencyManagement>
         <dependencies>
@@ -89,9 +119,103 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven.plugin.jar.version}</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Built-By></Built-By>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.plugin.surefire.version}</version>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${maven.plugin.source.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <excludes>
+                        <exclude>**/ManualTest*</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven.plugin.javadoc.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <sourceFileExcludes>
+                        <sourceFileExcludes>**/ManualTest*</sourceFileExcludes>
+                    </sourceFileExcludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>${maven.plugin.compiler.version}</version>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/ManualTest*</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven.plugin.gpg.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <keyname>${gpg.keyname}</keyname>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>${sonatype.plugin.centralPublishing.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
