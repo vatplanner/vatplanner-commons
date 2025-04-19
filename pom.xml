@@ -5,7 +5,7 @@
 
     <groupId>org.vatplanner.commons</groupId>
     <artifactId>vatplanner-commons-parent</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>1.0</version>
     <name>VATPlanner Commons Parent</name>
     <description>Parent POM for VATPlanner Commons</description>
     <packaging>pom</packaging>
