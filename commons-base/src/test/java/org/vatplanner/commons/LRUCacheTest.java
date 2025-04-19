@@ -93,15 +93,21 @@ class LRUCacheTest {
         @Test
         void testPut_maxEntriesExceeded_oldestEntryIsRemoved() {
             // arrange
-            LRUCache<String, Integer> cache = new LRUCache<>();
+            LRUCacheMock<String, Integer> cache = new LRUCacheMock<>();
             cache.setMaxEntries(3);
 
-            cache.put("m", 200);
-            cache.put("z", 1);
-            cache.put("a", 500);
+            cache.atSecondsBeforeMockReferenceTime(5)
+                 .put("m", 200);
+
+            cache.atSecondsBeforeMockReferenceTime(4)
+                 .put("z", 1);
+
+            cache.atSecondsBeforeMockReferenceTime(2)
+                 .put("a", 500);
 
             // act
-            cache.put("n", 100);
+            cache.atMockReferenceTime()
+                 .put("n", 100);
 
             // assert
             assertAll(
