@@ -40,7 +40,7 @@ import com.google.auto.service.AutoService;
 /**
  * Implements control over Git&reg; repositories through Eclipse JGit&trade;.
  *
- * <h3>Acknowledgements</h3>
+ * <h2>Acknowledgements</h2>
  * <p>
  * <a href="https://www.eclipse.org/" target="_blank">Eclipse</a> and
  * <a href="https://www.eclipse.org/jgit/" target="_blank">Eclipse JGit</a> are
