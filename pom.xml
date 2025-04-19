@@ -22,15 +22,15 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <!-- runtime dependencies -->
-        <amqpClient.version>5.20.0</amqpClient.version>
+        <amqpClient.version>5.25.0</amqpClient.version>
         <jgit.version>5.13.3.202401111512-r</jgit.version> <!-- listing: https://projects.eclipse.org/projects/technology.jgit -->
         <jsonSimple.version>4.0.1</jsonSimple.version>
-        <pgPainless.version>1.6.5</pgPainless.version>
-        <slf4j.version>1.7.12</slf4j.version>
+        <pgPainless.version>1.7.4</pgPainless.version> <!-- 1.7.5 - 1.7.6 are compiled for later Java releases -->
+        <slf4j.version>1.7.36</slf4j.version>
 
         <!-- test dependencies -->
-        <junit.version>5.10.0</junit.version>
-        <assertj.version>3.24.2</assertj.version>
+        <junit.version>5.12.2</junit.version>
+        <assertj.version>3.27.3</assertj.version> <!-- AssertJ 4 requires Java 17 -->
         <mockito.version>4.11.0</mockito.version> <!-- Mockito 5 requires Java 11 -->
 
         <!-- build dependencies -->
