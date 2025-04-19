@@ -10,7 +10,9 @@ import java.util.stream.Collectors;
 
 /**
  * A {@link Map}-like thread-safe cache evicting entries based on a configurable Least Recently Used policy.
- * Real-time {@link Instant}s are used for tracking last usage, so eviction depends on system time.
+ * Real-time {@link Instant}s are used for tracking last usage, so eviction depends on system time, which should
+ * be sufficient for usage as an actual cache. If two entries were last used in the same {@link Instant} and
+ * only one of them gets evicted, either of them may be discarded or kept.
  * <p>
  * Entries can be stored, retrieved and managed similar to a {@link Map} using {@link #put(Object, Object)},
  * {@link #get(Object)}, {@link #remove(Object)} and {@link #clear()}. {@code null} values can be stored but not
