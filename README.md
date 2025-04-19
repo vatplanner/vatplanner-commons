@@ -1,3 +1,7 @@
+[![Maven Central](https://img.shields.io/maven-central/v/org.vatplanner.commons/vatplanner-commons-parent.svg?label=Maven%20Central)](https://central.sonatype.com/namespace/org.vatplanner.commons)
+[![JavaDoc](https://javadoc.io/badge2/org.vatplanner.commons/vatplanner-commons-base/javadoc.svg)](#api-documentation)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
+
 # VATPlanner Commons
 
 The artifacts provided through this repository are a collection of various "helper classes" extracted from and in use
@@ -31,6 +35,15 @@ this repository should primarily be understood as an essential part of "just" VA
 
 At this point no particular guarantees for API stability will be given. Interfaces and availability of classes/methods
 may change seemingly "at random" as they are solely aligned with ongoing development of VATPlanner.
+
+## API Documentation
+
+API documentation can be read online on [javadoc.io](https://javadoc.io/):
+
+* [`vatplanner-commons-base`](https://javadoc.io/doc/org.vatplanner.commons/vatplanner-commons-base)
+* [`vatplanner-commons-amqp`](https://javadoc.io/doc/org.vatplanner.commons/vatplanner-commons-amqp)
+* [`vatplanner-commons-crypto`](https://javadoc.io/doc/org.vatplanner.commons/vatplanner-commons-crypto)
+* [`vatplanner-commons-adapter-jgit`](https://javadoc.io/doc/org.vatplanner.commons/vatplanner-commons-adapter-jgit)
 
 ## License
 
