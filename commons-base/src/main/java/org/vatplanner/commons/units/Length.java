@@ -2,6 +2,9 @@ package org.vatplanner.commons.units;
 
 import java.util.Objects;
 
+import org.vatplanner.commons.geo.GeoMath;
+import org.vatplanner.commons.geo.GeoPoint2D;
+
 /**
  * Represents a length or distance, linked to a specific {@link Unit} used for measurement.
  * Value and unit are stored; conversion only happens on request, if necessary.
@@ -32,6 +35,25 @@ public class Length implements Comparable<Length> {
      */
     public double getValueAs(Unit wantedUnit) {
         return unit.convertTo(value, wantedUnit);
+    }
+
+    /**
+     * Calculates the distance between both points using the specified {@link GeoMath.DistanceCalculator}.
+     * <p>
+     * This is just an alternative to calling the calculator directly.
+     * </p>
+     * <p>
+     * See {@link GeoMath} for pre-defined calculation methods.
+     * </p>
+     *
+     * @param pointA     first point
+     * @param pointB     second point
+     * @param calculator {@link GeoMath.DistanceCalculator} to use
+     * @param <T>        common type of both points
+     * @return distance between both points
+     */
+    public static <T extends GeoPoint2D> Length between(T pointA, T pointB, GeoMath.DistanceCalculator<T> calculator) {
+        return calculator.calculateDistanceBetween(pointA, pointB);
     }
 
     /**
