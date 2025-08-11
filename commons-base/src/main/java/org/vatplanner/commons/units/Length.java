@@ -1,10 +1,12 @@
 package org.vatplanner.commons.units;
 
+import java.util.Objects;
+
 /**
  * Represents a length or distance, linked to a specific {@link Unit} used for measurement.
  * Value and unit are stored; conversion only happens on request, if necessary.
  */
-public class Length {
+public class Length implements Comparable<Length> {
     private final double value; // TODO: keep exact int/long if provided
     private final Unit unit;
 
@@ -46,6 +48,29 @@ public class Length {
     @Override
     public String toString() {
         return "Length(" + value + unit.shortName + ")";
+    }
+
+    @Override
+    public int compareTo(Length other) {
+        double otherValue = other.getValueAs(this.unit);
+        return Double.compare(this.value, otherValue);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Length)) {
+            return false;
+        }
+
+        Length other = (Length) obj;
+        double otherValue = other.getValueAs(this.unit);
+
+        return this.value == otherValue;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value, unit);
     }
 
     /**
