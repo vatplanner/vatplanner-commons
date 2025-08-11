@@ -57,6 +57,29 @@ public class Length implements Comparable<Length> {
     }
 
     /**
+     * Converts the internally held value from current {@link Unit} to the requested one. As {@link Length} is immutable, the
+     * original value remains unmodified; instead a new instance using the requested unit will be returned.
+     * <p>
+     * In case units are equal, no conversion will happen. Not all conversions may be supported.
+     * </p>
+     * <p>
+     * Unit conversion happens through {@link #getValueAs(Unit)}, if needed. This method is recommended to be used
+     * for optimization to avoid having to repeat the same conversion many times, if only a specific unit is used in
+     * calculations and preserving the exact original value is not important.
+     * </p>
+     *
+     * @param unit wanted unit of measurement
+     * @return instance holding value converted to wanted unit of measurement; same instance if unit already matches
+     */
+    public Length convertTo(Unit unit) {
+        if (this.unit == unit) {
+            return this;
+        }
+
+        return new Length(this.unit.convertTo(value, unit), unit);
+    }
+
+    /**
      * Creates a new {@link Length} of given value and {@link Unit} of measurement.
      *
      * @param value measured value
