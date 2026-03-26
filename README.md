@@ -1,4 +1,4 @@
-[![Maven Central](https://img.shields.io/maven-central/v/org.vatplanner.commons/vatplanner-commons-parent.svg?label=Maven%20Central&strategy=latestProperty)](https://central.sonatype.com/namespace/org.vatplanner.commons)
+[![Maven Central](https://img.shields.io/maven-central/v/org.vatplanner.commons/vatplanner-commons-parent.svg?label=Maven%20Central)](https://central.sonatype.com/namespace/org.vatplanner.commons)
 [![JavaDoc](https://javadoc.io/badge2/org.vatplanner.commons/vatplanner-commons-base/javadoc.svg)](#api-documentation)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
